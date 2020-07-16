@@ -13,8 +13,8 @@ public class ThreeLiveForPlayer : MonoBehaviour
     [SerializeField]
     TextMeshProUGUI RemainingTime;
     int checkServerHearts;
-    DateTime checkServerTime;
-    DateTime checkCountTime;
+    int ServerTime;
+    int PlayerTime;
     IEnumerator coroutine;
 
     public Image[] Hearts;
@@ -35,17 +35,116 @@ public class ThreeLiveForPlayer : MonoBehaviour
         StopCoroutine(coroutine);
     }
 
-    void OnGetUpdateLives(GetPlayerStatisticsResult result)
+    void HeartsUpdate(GetPlayerStatisticsResult result)
     {
-        foreach (var eachStat in result.Statistics)
+        currentHearts = result.Statistics.Find(stat => stat.StatisticName == "Lives").Value;
+
+        startButton.gameObject.SetActive(currentHearts > 0);
+        restertButton.gameObject.SetActive(currentHearts > 0);
+
+        for (int i = 0; i < currentHearts; i++)
         {
-            switch (eachStat.StatisticName)
+            Hearts[i].color = Color.white;
+        }
+        for (int i = currentHearts; i < 3; i++)
+        {
+            Hearts[i].color = Color.black;
+        }
+
+        if (currentHearts < 3)
+        {
+            var requestTime = new GetTimeRequest { };
+            PlayFabClientAPI.GetTime(requestTime, ServerTimeResult =>
             {
-                case "Lives":
-                    currentHearts = Convert.ToInt32(eachStat.Value.ToString());
-                    CurrentHearts(currentHearts);
-                    break;
-            }
+                PlayerTime = result.Statistics.Find(stat => stat.StatisticName == "Time").Value;
+                Debug.Log("PlayerTime: " + PlayerTime);
+
+                ServerTime = Convert.ToInt32(new TimeSpan(ServerTimeResult.Time.Ticks).TotalMinutes);
+                Debug.Log("ServerTime B: " + ServerTime);
+
+                RemainingTime.text = "Life will be restored in " + (60 - (ServerTime - PlayerTime)) + " minutes";
+
+                Debug.Log("ServerTime A: " + ServerTime);
+
+                switch (currentHearts)
+                {
+                    case 0:
+                        {
+                            //string RemainingTime = "Life will be restored in " + (60 - (ServerTime - PlayerTime)) + " minutes";
+                            if (ServerTime >= PlayerTime + 180)
+                            {
+                                UpdateLives(currentHearts + 3);
+                                UpdateTime(PlayerTime + 180);
+                                //RemainingTime = "";
+                                RemainingTime.text = "Restoring life, Wait a second...";
+                                startButton.gameObject.SetActive(false);
+                            }
+                            else if (ServerTime >= PlayerTime + 120)
+                            {
+                                UpdateLives(currentHearts + 2);
+                                UpdateTime(PlayerTime + 120);
+                                //RemainingTime = "Life will be restored in " + (60 - (ServerTime - (PlayerTime + 120))) + " minutes";
+                                RemainingTime.text = "Restoring life, Wait a second...";
+                                startButton.gameObject.SetActive(false);
+                            }
+                            else if (ServerTime >= PlayerTime + 60)
+                            {
+                                UpdateLives(currentHearts + 1);
+                                UpdateTime(PlayerTime + 60);
+                                //RemainingTime = "Life will be restored in " + (60 - (ServerTime - (PlayerTime + 60))) + " minutes";
+                                RemainingTime.text = "Restoring life, Wait a second...";
+                                startButton.gameObject.SetActive(false);
+                            }
+                            Debug.Log("ServerTime IN 0: " + ServerTime);
+                            //this.RemainingTime.text = RemainingTime;
+                        }
+                        break;
+                    case 1:
+                        {
+                            //string RemainingTime = "Life will be restored in " + (60 - (ServerTime - PlayerTime)) + " minutes";
+                            if (ServerTime >= PlayerTime + 120)
+                            {
+                                UpdateLives(currentHearts + 2);
+                                UpdateTime(PlayerTime + 120);
+                                //RemainingTime = "";
+                                RemainingTime.text = "Restoring life, Wait a second...";
+                                startButton.gameObject.SetActive(false);
+                            }
+                            else if (ServerTime >= PlayerTime + 60)
+                            {
+                                UpdateLives(currentHearts + 1);
+                                UpdateTime(PlayerTime + 60);
+                                //RemainingTime = "Life will be restored in " + (60 - (ServerTime - (PlayerTime + 60))) + " minutes";
+                                RemainingTime.text = "Restoring life, Wait a second...";
+                                startButton.gameObject.SetActive(false);
+                            }
+                            Debug.Log("ServerTime IN 1: " + ServerTime);
+                            //this.RemainingTime.text = RemainingTime;
+                        }
+                        break;
+                    case 2:
+                        {
+                            //string RemainingTime = "Life will be restored in " + (60 - (ServerTime - PlayerTime)) + " minutes";
+                            if (ServerTime >= PlayerTime + 60)
+                            {
+                                UpdateLives(currentHearts + 1);
+                                UpdateTime(PlayerTime + 60);
+                                //RemainingTime = "";
+                                RemainingTime.text = "Restoring life, Wait a second...";
+                                startButton.gameObject.SetActive(false);
+                            }
+                            Debug.Log("ServerTime IN 2: " + ServerTime);
+                            //this.RemainingTime.text = RemainingTime;
+                        }
+                        break;
+                }
+            }, ServerTimeError => { });
+
+        }
+        else
+        {
+            RemainingTime.text = "";
+            startButton.gameObject.SetActive(true);
         }
     }
     IEnumerator MakeUpdate()
@@ -56,7 +155,7 @@ public class ThreeLiveForPlayer : MonoBehaviour
             {
                 PlayFabClientAPI.GetPlayerStatistics(
         new GetPlayerStatisticsRequest(),
-        OnGetUpdateLives,
+        HeartsUpdate,
         error => Debug.LogError(error.GenerateErrorReport()));
             }
             catch
@@ -69,130 +168,18 @@ public class ThreeLiveForPlayer : MonoBehaviour
             yield return new WaitForSeconds(5);
         }
         while (true);
-    }
-    void CurrentHearts(int numberHearts)
-    {
-        if (numberHearts > 0)
-        {
-            startButton.gameObject.SetActive(true);
-            restertButton.gameObject.SetActive(true);
-        }
-        else
-        {
-            startButton.gameObject.SetActive(false);
-            restertButton.gameObject.SetActive(false);
-        }
-
-        for (int i = 0; i < numberHearts; i++)
-        {
-            Hearts[i].color = Color.white;
-        }
-        for (int i = numberHearts; i < 3; i++)
-        {
-            Hearts[i].color = Color.black;
-        }
-
-        if (currentHearts < 3)
-        {
-            var requestTime = new GetTimeRequest { };
-            PlayFabClientAPI.GetTime(requestTime, ServerTimeResult =>
-            {
-                PlayFabClientAPI.GetPlayerStatistics(
-                    new GetPlayerStatisticsRequest(),
-                    PlayerTimeResult =>
-                    {
-                        foreach (var eachStat in PlayerTimeResult.Statistics)
-                        {
-                            switch (eachStat.StatisticName)
-                            {
-                                case "Time":
-
-                                    int sendTime = 0;
-
-                                    checkServerTime = ServerTimeResult.Time;
-                                    TimeSpan t = TimeSpan.FromTicks(checkServerTime.Ticks);
-                                    long get = Convert.ToInt32(t.TotalMinutes);
-
-                                    if (get >= (Convert.ToInt32(eachStat.Value) + 180) && currentHearts == 0)
-                                    {
-                                        Debug.Log("get: " + get);
-                                        Debug.Log("eachStat: " + Convert.ToInt32(eachStat.Value));
-                                        UpdateTime(Convert.ToInt32(eachStat.Value.ToString()) + 180);
-                                        UpdateLives(3);
-                                        RemainingTime.text = "";
-                                        break;
-                                    }
-                                    else if (get >= (Convert.ToInt32(eachStat.Value) + 120) && (currentHearts == 0 || currentHearts == 1))
-                                    {
-                                        Debug.Log("get: " + get);
-                                        Debug.Log("eachStat: " + Convert.ToInt32(eachStat.Value));
-                                        UpdateTime(Convert.ToInt32(eachStat.Value.ToString()) + 120);
-                                        UpdateLives(currentHearts+2);
-                                        if(currentHearts == 0)
-                                            RemainingTime.text = "Life will be restored in: " + ((Convert.ToInt32(eachStat.Value.ToString()) + 180) - get) + "m";
-                                        else
-                                            RemainingTime.text = "";
-                                        break;
-                                    }
-                                    else if (get >= (Convert.ToInt32(eachStat.Value) + 60) && (currentHearts == 0 || currentHearts == 1 || currentHearts == 2))
-                                    {
-                                        Debug.Log("get: " + get);
-                                        Debug.Log("eachStat: " + Convert.ToInt32(eachStat.Value));
-                                        UpdateTime(Convert.ToInt32(eachStat.Value.ToString()) + 60);
-                                        UpdateLives(currentHearts+1);
-                                        if (currentHearts == 0)
-                                            RemainingTime.text = "Life will be restored in: " + ((Convert.ToInt32(eachStat.Value.ToString()) + 60) - get) + "m";
-                                        else if (currentHearts == 1)
-                                            RemainingTime.text = "Life will be restored in: " + ((Convert.ToInt32(eachStat.Value.ToString()) + 120) - get) + "m";
-                                        else
-                                            RemainingTime.text = "";
-                                        break;
-                                    }
-                                    RemainingTime.text = "Life will be restored in: " + ((Convert.ToInt32(eachStat.Value.ToString()) + 60) - get) + "m";
-                                    break;
-                                    /*if (get >= (Convert.ToInt32(eachStat.Value) + 60))
-                                    {
-                                        Debug.Log("get: " + get);
-                                        Debug.Log("eachStat: " + Convert.ToInt32(eachStat.Value) + 60);
-                                        UpdateTime(Convert.ToInt32(eachStat.Value.ToString()) + 60);
-                                        UpdateLives(currentHearts + 1);
-                                        break;
-                                    }*/
-                            }
-                        }
-                    },
-                    PlayerTimeError => Debug.LogError(PlayerTimeError.GenerateErrorReport()));
-            }, ServerTimeError => { });
-        }
-        else
-            RemainingTime.text = "";
-    }
+    }    
     public void RemoveHearts()
     {
-        if (currentHearts > 0)
+        if (currentHearts == 3)
         {
-            if (currentHearts == 3)
-            {
-                var requestTime = new GetTimeRequest { };
-                PlayFabClientAPI.GetTime(requestTime, nolol =>
-                {
-                    checkServerTime = nolol.Time;
-                    TimeSpan t = TimeSpan.FromTicks(checkServerTime.Ticks);
-                    long send = Convert.ToInt32(t.TotalMinutes);
-                    Debug.Log("Timespan 4 : " + send);
-                    UpdateTime(send);
-                }, noelol => { });
-            }
-
-            currentHearts -= 1;
-            UpdateLives(currentHearts);
+            Debug.Log("ServerTime RemoveHearts: " + ServerTime);
+            UpdateTime(ServerTime);
         }
+        UpdateLives(currentHearts -= 1);
 
         Debug.Log("On Remove Hearts " + currentHearts);
-
-        CurrentHearts(currentHearts);
     }
-
     private void UpdateTime(long send)
     {
         PlayFabClientAPI.ExecuteCloudScript(new ExecuteCloudScriptRequest()
@@ -200,7 +187,7 @@ public class ThreeLiveForPlayer : MonoBehaviour
             FunctionName = "UpdateTime", // Arbitrary function name (must exist in your uploaded cloud.js file)
             FunctionParameter = new { TimeValue = send }, // The parameter provided to your function
             GeneratePlayStreamEvent = true, // Optional - Shows this event in PlayStream
-        }, nonolol => { }, nonoelol => { });
+        }, ECSR => { }, ECSE => { });
     }
     private void UpdateLives(int lives)
     {
@@ -209,7 +196,7 @@ public class ThreeLiveForPlayer : MonoBehaviour
             FunctionName = "UpdateLives", // Arbitrary function name (must exist in your uploaded cloud.js file)
             FunctionParameter = new { LivesValue = lives }, // The parameter provided to your function
             GeneratePlayStreamEvent = true, // Optional - Shows this event in PlayStream
-        }, qwe => { }, ewq => { });
+        }, ECSR => { }, ECSE => { });
     }
 }
 

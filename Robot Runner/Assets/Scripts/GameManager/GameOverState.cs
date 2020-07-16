@@ -13,6 +13,8 @@ using System.Collections.Generic;
 /// </summary>
 public class GameOverState : AState
 {
+    [SerializeField]
+    SkinSelection skinSelection;
 
     private int sendCoins;
     private int previousCoinValueServer;
@@ -161,6 +163,15 @@ public class GameOverState : AState
 
         sendCoins = de.coins;
 
+        //------------------------------------Achivements check-------------------------------------------------
+
+        if (sendCoins >= 12000)
+            CheckAndGrantSkin("Lolipop");
+        if (sendCoins >= 18000)
+            CheckAndGrantSkin("Rusty Military");
+        if (sendCoins >= 25000)
+            CheckAndGrantSkin("Military");
+
         //------------------------------------Playfab highscore send to server 1 end--------------------------
 
         //register data to analytics
@@ -189,7 +200,35 @@ public class GameOverState : AState
         trackManager.End();
     }
 
+    void CheckAndGrantSkin(string SkinName)
+    {
+        GetUserInventoryRequest items = new GetUserInventoryRequest { };
+        PlayFabClientAPI.GetUserInventory(items, itemInfo =>
+        {
+            foreach (var eachStat in itemInfo.Inventory)
+            {
+                bool grant = true;
+                if (eachStat.ItemId == SkinName)
+                    grant = false;
+                if (grant)
+                {
+                    var purchaseRequest = new PurchaseItemRequest();
+                    purchaseRequest.CatalogVersion = "Skins";
+                    purchaseRequest.ItemId = SkinName + "Bundle";
+                    purchaseRequest.VirtualCurrency = "ST";
+                    purchaseRequest.Price = 0;
+                    PlayFabClientAPI.PurchaseItem(purchaseRequest, result => { Debug.Log(SkinName + " added"); }, error => { Debug.Log(SkinName + " was not added added"); });
 
+                    for (int j = 0; j < skinSelection.SkinDetails.Length; j++)
+                    {
+                        if (skinSelection.SkinDetails[j].Name == SkinName)
+                            skinSelection.Locked[j] = false;
+                    }
+                }
+            }
+
+        }, itemError => { itemError.GenerateErrorReport(); });
+    }
 
     void OnGetStats(GetPlayerStatisticsResult result)
     {

@@ -67,6 +67,12 @@ namespace PlayFabRegistration
             PlayerPrefs.SetString("Password",password);
 
             onRegistrationSuccess();
+
+            PlayerPrefs.SetString("Skin", "Classic");
+
+            PlayerPrefs.DeleteKey("Day");
+            PlayerPrefs.DeleteKey("Month");
+
             Debug.Log("Success");
         }
         void OnPlayfabRegistrationFailure(PlayFabError error)

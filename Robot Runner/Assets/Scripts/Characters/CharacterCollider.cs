@@ -168,9 +168,6 @@ public class CharacterCollider : MonoBehaviour
                 else if (c.gameObject.tag == "Baricada")
                 {
                     sosi.activatedSound = null;
-                    Debug.Log("sosi");
-                    Debug.Log(sosi);
-                    Debug.Log(sosi.activatedSound);
                     controller.powerupSource.Stop();
                     controller.End("nothing");
                     

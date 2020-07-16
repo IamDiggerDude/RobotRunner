@@ -30,7 +30,7 @@ public class InformatioAfterGame : MonoBehaviour
     {
 
         Score.SetText("SCORE: " + PlayerData.instance.highscores.ToString());
-        BBTS.SetText("BBTC: " + PlayerData.instance.coins.ToString());
+        BBTS.SetText("Satoshi: " + PlayerData.instance.coins.ToString());
         Percent.SetText(PlayerData.instance.rank.ToString());
 
     }
